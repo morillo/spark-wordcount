@@ -1,0 +1,44 @@
+The North
+Winterfell
+Eddard Stark
+Catelyn Stark
+Robb Stark
+Sansa Stark
+Arya Stark
+Bran Stark
+Rickon
+Jon Snow
+
+Eyrie
+Jon Arryn
+Lisa Arryn
+Robert Arryn
+
+Casterly Rock
+Tywin Lannister
+Jaime Lannister
+Cersei Lannister
+Tyrion Lannister
+
+Storm's End
+Robert Baratheon
+Stannis Baratheon
+Renly Baratheon
+Selyse Baratheon
+Shireen Baratheon
+
+Dragonstone
+Daenerys Targaryen
+Viserys Targaryen
+Aemon Targaryen
+
+The Reach
+Loras Tyrell
+Margaery Tyrell
+Mace Tyrell
+
+Dorne
+Doran Martell
+Oberyn Martell
+Elia Martell
+Arianne Martell
