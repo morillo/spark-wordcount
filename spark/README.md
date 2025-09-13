@@ -6,8 +6,9 @@ A modernized Apache Spark application that performs word counting on text files,
 
 - **Modern Spark 4.0.1** with Scala 2.13 support
 - **Java 17** compatibility
+- **Two implementations**: Classic RDD API and modern DataFrame/SparkSQL API
 - **Command-line arguments** for flexible input/output paths
-- **Automated build and execution** via shell script
+- **Automated build and execution** via shell scripts
 - **Word processing** with case normalization and punctuation removal
 - **Frequency-sorted results** (most common words first)
 
@@ -31,15 +32,17 @@ mvn --version
 ├── README.md
 ├── pom.xml                                    # Maven configuration
 ├── src/main/scala/com/morillo/spark/
-│   └── WordCount.scala                        # Main Spark application
-├── run-wordcount.sh                          # Execution script
+│   ├── WordCount.scala                        # RDD API implementation
+│   └── WordCountDataFrame.scala               # DataFrame/SparkSQL API implementation
+├── run-wordcount.sh                          # RDD API execution script
+├── run-wordcount-dataframe.sh                # DataFrame API execution script
 ├── westeros.txt                              # Sample Game of Thrones data
 └── target/                                   # Build outputs (generated)
 ```
 
 ## 🔧 Building the Project
 
-The application will be built automatically when using the run script, or you can build manually:
+**You must build the project before running the execution scripts:**
 
 ```bash
 # Set Java 17 for Maven (if using Java 24 by default)
@@ -51,9 +54,17 @@ mvn clean package
 
 This creates `target/spark-wordcount-1.0.0.jar` ready for Spark submission.
 
+**Note**: The execution scripts (`run-wordcount.sh` and `run-wordcount-dataframe.sh`) do NOT build the project automatically. You must run the Maven build command first.
+
 ## 🚀 Running the Application
 
-### Option 1: Using the Shell Script (Recommended)
+### Prerequisites: Build First
+```bash
+# Build the project (required before running scripts)
+mvn clean package
+```
+
+### Option 1: RDD API Implementation (Classic Approach)
 
 ```bash
 # Make script executable (first time only)
@@ -66,13 +77,26 @@ chmod +x run-wordcount.sh
 ./run-wordcount.sh /path/to/input.txt /path/to/output_directory
 ```
 
-### Option 2: Direct spark-submit
+### Option 2: DataFrame API Implementation (Modern SparkSQL)
+
+```bash
+# Make script executable (first time only)
+chmod +x run-wordcount-dataframe.sh
+
+# Run with Game of Thrones data
+./run-wordcount-dataframe.sh westeros.txt sevenkingdoms-dataframe
+
+# Run with custom input/output
+./run-wordcount-dataframe.sh /path/to/input.txt /path/to/output_directory
+```
+
+### Option 3: Direct spark-submit
 
 ```bash
 # Build first
 mvn clean package
 
-# Submit to Spark
+# Submit RDD API version to Spark
 spark-submit \
   --class com.morillo.spark.WordCount \
   --master local[*] \
@@ -82,6 +106,17 @@ spark-submit \
   target/spark-wordcount-1.0.0.jar \
   westeros.txt \
   sevenkingdoms
+
+# Submit DataFrame API version to Spark
+spark-submit \
+  --class com.morillo.spark.WordCountDataFrame \
+  --master local[*] \
+  --deploy-mode client \
+  --driver-memory 2g \
+  --executor-memory 1g \
+  target/spark-wordcount-1.0.0.jar \
+  westeros.txt \
+  sevenkingdoms-dataframe
 ```
 
 ## 📊 Sample Output
@@ -131,25 +166,43 @@ The application uses these default Spark settings:
 
 ## 🔍 Application Logic
 
+### RDD API Implementation (WordCount.scala)
+
 1. **Input Validation**: Ensures exactly 2 arguments (input path, output path)
 2. **Spark Session**: Creates session with descriptive app name
 3. **Text Processing**:
-   - Reads input file(s) using `textFile()`
-   - Splits lines on whitespace
+   - Reads input file(s) using `sc.textFile()`
+   - Splits lines on whitespace using `flatMap`
    - Filters empty strings
-   - Normalizes to lowercase and removes punctuation
+   - Normalizes to lowercase and removes punctuation using `map`
    - Filters empty results after cleaning
 4. **Word Counting**: Uses `reduceByKey()` for distributed counting
-5. **Sorting**: Results sorted by frequency (descending)
-6. **Output**: Saves to specified directory path
+5. **Sorting**: Results sorted by frequency using `sortBy()`
+6. **Output**: Saves to specified directory path using `saveAsTextFile()`
+
+### DataFrame API Implementation (WordCountDataFrame.scala)
+
+1. **Input Validation**: Ensures exactly 2 arguments (input path, output path)
+2. **Spark Session**: Creates session with descriptive app name
+3. **Text Processing**:
+   - Reads input file(s) using `spark.read.text()`
+   - Splits lines using `explode(split())` functions
+   - Filters empty strings using DataFrame operations
+   - Normalizes using `lower()` and `regexp_replace()` functions
+   - Filters empty results after cleaning
+4. **Word Counting**: Uses `groupBy().agg(count())` for aggregation
+5. **Sorting**: Results sorted using `orderBy(desc(), asc())`
+6. **Output**: Saves using DataFrame `write.text()` operations
+7. **Bonus**: Includes SQL query alternative (commented) and console output with statistics
 
 ## 🔧 Development
 
 ### Code Structure
 
 - **Package**: `com.morillo.spark`
-- **Main Class**: `WordCount`
-- **Entry Point**: `main(args: Array[String])`
+- **RDD API Class**: `WordCount`
+- **DataFrame API Class**: `WordCountDataFrame`
+- **Entry Points**: `main(args: Array[String])` in both classes
 
 ### Key Dependencies
 
@@ -171,15 +224,35 @@ The application uses these default Spark settings:
 ## 📝 Usage Examples
 
 ```bash
-# Basic word count
+# Build first (always required)
+mvn clean package
+
+# Basic word count (RDD API)
 ./run-wordcount.sh westeros.txt got_results
 
-# Process large text file
+# Basic word count (DataFrame API)
+./run-wordcount-dataframe.sh westeros.txt got_results_df
+
+# Process large text file (RDD API)
 ./run-wordcount.sh /data/books/complete_series.txt /results/word_analysis
 
-# Count words in log files
-./run-wordcount.sh /var/log/application.log /analytics/log_words
+# Process large text file (DataFrame API)
+./run-wordcount-dataframe.sh /data/books/complete_series.txt /results/word_analysis_df
+
+# Count words in log files (DataFrame API with better performance for complex queries)
+./run-wordcount-dataframe.sh /var/log/application.log /analytics/log_words
 ```
+
+## 🔄 RDD vs DataFrame API Comparison
+
+| Feature | RDD API | DataFrame API |
+|---------|---------|---------------|
+| **Performance** | Good for simple operations | Better for complex operations with Catalyst optimizer |
+| **Code Style** | Functional programming style | SQL-like operations |
+| **Type Safety** | Compile-time type safety | Runtime schema validation |
+| **Optimization** | Manual optimization needed | Automatic query optimization |
+| **Learning Curve** | Steeper for beginners | Easier for SQL users |
+| **Best For** | Complex transformations, legacy code | Analytics, SQL users, performance-critical apps |
 
 ## 🐛 Troubleshooting
 
