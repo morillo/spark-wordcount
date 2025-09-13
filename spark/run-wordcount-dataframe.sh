@@ -1,17 +1,16 @@
 #!/bin/bash
 
-# Game of Thrones Word Count - RDD API - Spark Submit Runner
-# Usage: ./run-wordcount.sh <input_file> <output_directory>
+# Game of Thrones Word Count - DataFrame API - Spark Submit Runner
+# Usage: ./run-wordcount-dataframe.sh <input_file> <output_directory>
 
 set -e
 
 # Check arguments
 if [ $# -ne 2 ]; then
     echo "Usage: $0 <input_file> <output_directory>"
-    echo "Example: $0 westeros.txt sevenkingdoms"
+    echo "Example: $0 westeros.txt sevenkingdoms-dataframe"
     echo ""
-    echo "This script uses the classic RDD API. For DataFrame API, use:"
-    echo "./run-wordcount-dataframe.sh <input_file> <output_directory>"
+    echo "This script uses the modern DataFrame API instead of RDD API"
     exit 1
 fi
 
@@ -38,13 +37,13 @@ if [ -d "$OUTPUT_DIR" ]; then
     rm -rf "$OUTPUT_DIR"
 fi
 
-# Submit the job to Spark using RDD API
-echo "Submitting Spark job (RDD API)..."
+# Submit the job to Spark using DataFrame API
+echo "Submitting Spark job (DataFrame API)..."
 echo "Input: $INPUT_FILE"
 echo "Output: $OUTPUT_DIR"
 
 spark-submit \
-  --class com.morillo.spark.WordCount \
+  --class com.morillo.spark.WordCountDataFrame \
   --master local[*] \
   --deploy-mode client \
   --driver-memory 2g \
