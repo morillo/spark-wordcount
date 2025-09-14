@@ -3,3 +3,7 @@
 # Spark output directories
 sevenkingdoms/
 sevenkingdoms-dataframe/
+
+# IDE output directories
+sevenkingdoms-ide/
+sevenkingdoms-dataframe-ide/

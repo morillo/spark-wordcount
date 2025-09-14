@@ -1,0 +1,12 @@
+<component name="ProjectRunConfigurationManager">
+  <configuration default="false" name="WordCount (RDD API)" type="Application" factoryName="Application">
+    <option name="MAIN_CLASS_NAME" value="com.morillo.spark.WordCount" />
+    <option name="VM_PARAMETERS" value="-Xmx2g -Dspark.master=local[*] -Dspark.app.name=WordCount-IDE -Dspark.sql.warehouse.dir=target/spark-warehouse --add-opens=java.base/java.lang=ALL-UNNAMED --add-opens=java.base/java.lang.invoke=ALL-UNNAMED --add-opens=java.base/java.lang.reflect=ALL-UNNAMED --add-opens=java.base/java.io=ALL-UNNAMED --add-opens=java.base/java.net=ALL-UNNAMED --add-opens=java.base/java.nio=ALL-UNNAMED --add-opens=java.base/java.util=ALL-UNNAMED --add-opens=java.base/java.util.concurrent=ALL-UNNAMED --add-opens=java.base/java.util.concurrent.atomic=ALL-UNNAMED --add-opens=java.base/sun.nio.ch=ALL-UNNAMED --add-opens=java.base/sun.nio.cs=ALL-UNNAMED --add-opens=java.base/sun.security.action=ALL-UNNAMED --add-opens=java.base/sun.util.calendar=ALL-UNNAMED --add-opens=java.security.jgss/sun.security.krb5=ALL-UNNAMED --add-opens=java.base/java.lang.ref=ALL-UNNAMED" />
+    <option name="PROGRAM_PARAMETERS" value="westeros.txt sevenkingdoms-ide" />
+    <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$" />
+    <module name="spark-wordcount" />
+    <method v="2">
+      <option name="Make" enabled="true" />
+    </method>
+  </configuration>
+</component>
