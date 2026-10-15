@@ -1,13 +1,26 @@
 package com.morillo.spark
 
-import org.apache.spark.sql.SparkSession
+import org.apache.spark.sql.{DataFrame, SparkSession}
 import org.apache.spark.sql.functions._
-import org.apache.spark.sql.types.{StringType, StructField, StructType}
 
+/** Word count with the DataFrame API. Writes the same `(word,count)` text format as [[WordCount]]. */
 object WordCountDataFrame {
 
-  def main(args: Array[String]): Unit = {
+  /** Counts cleaned words in the `value` column of `lines`, ordered by descending count then word. */
+  def countWords(lines: DataFrame): DataFrame =
+    lines
+      .select(explode(split(col("value"), WordCleaner.Whitespace)).as("word"))
+      .select(regexp_replace(lower(col("word")), WordCleaner.NonAlphanumeric, "").as("clean_word"))
+      .filter(col("clean_word") =!= "")
+      .groupBy("clean_word")
+      .agg(count("*").as("count"))
+      .orderBy(desc("count"), asc("clean_word"))
 
+  /** Formats a `(clean_word, count)` DataFrame as single-column `(word,count)` text, matching the RDD output. */
+  def formatForOutput(wordCounts: DataFrame): DataFrame =
+    wordCounts.select(concat(lit("("), col("clean_word"), lit(","), col("count"), lit(")")).as("result"))
+
+  def main(args: Array[String]): Unit = {
     if (args.length != 2) {
       System.err.println("Usage: WordCountDataFrame <input_path> <output_path>")
       System.exit(1)
@@ -16,60 +29,26 @@ object WordCountDataFrame {
     val inputPath = args(0)
     val outputPath = args(1)
 
-    val spark = SparkSession.builder()
+    val spark = SparkSession
+      .builder()
       .appName("Game of Thrones Word Count - DataFrame API")
       .getOrCreate()
 
-    import spark.implicits._
-
     try {
-      // Read text file as DataFrame
-      val textDF = spark.read
-        .option("wholetext", "false")
-        .text(inputPath)
+      val wordCounts = countWords(spark.read.text(inputPath))
 
-      // Split lines into words and explode into individual rows
-      val wordsDF = textDF
-        .select(explode(split(col("value"), "\\s+")).as("word"))
-        .filter(col("word") =!= "")
+      // Equivalent SQL:
+      //   SELECT clean_word, COUNT(*) AS count FROM words GROUP BY clean_word ORDER BY count DESC, clean_word ASC
 
-      // Clean and normalize words: lowercase and remove punctuation
-      val cleanWordsDF = wordsDF
-        .select(regexp_replace(lower(col("word")), "[^a-zA-Z0-9]", "").as("clean_word"))
-        .filter(col("clean_word") =!= "")
-
-      // Count words using DataFrame aggregation
-      val wordCountsDF = cleanWordsDF
-        .groupBy("clean_word")
-        .agg(count("*").as("count"))
-        .orderBy(desc("count"), asc("clean_word"))
-
-      // Alternative using SQL syntax
-      // cleanWordsDF.createOrReplaceTempView("words")
-      // val wordCountsDF = spark.sql("""
-      //   SELECT clean_word, COUNT(*) as count
-      //   FROM words
-      //   GROUP BY clean_word
-      //   ORDER BY count DESC, clean_word ASC
-      // """)
-
-      // Show sample results
       println("Top 20 most frequent words:")
-      wordCountsDF.show(20)
+      wordCounts.show(20)
 
-      // Save results
-      wordCountsDF
-        .select(concat(lit("("), col("clean_word"), lit(","), col("count"), lit(")")).as("result"))
-        .write
-        .mode("overwrite")
-        .option("header", "false")
-        .text(outputPath)
+      formatForOutput(wordCounts).write.mode("overwrite").text(outputPath)
 
-      println(s"Word count completed successfully!")
+      println("Word count completed successfully!")
       println(s"Input: $inputPath")
       println(s"Output: $outputPath")
-      println(s"Total unique words: ${wordCountsDF.count()}")
-
+      println(s"Total unique words: ${wordCounts.count()}")
     } finally {
       spark.stop()
     }

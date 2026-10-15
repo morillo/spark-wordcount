@@ -1,0 +1,21 @@
+version: 2
+updates:
+  - package-ecosystem: maven
+    directory: /
+    schedule:
+      interval: weekly
+    ignore:
+      # Spark is pinned to the spark-submit distribution in
+      # /usr/local/spark-versions (see README "Prerequisites"); bump it by
+      # hand together with that distribution. Patch releases are still proposed.
+      - dependency-name: "org.apache.spark:*"
+        update-types: ["version-update:semver-major", "version-update:semver-minor"]
+      # Scala minor versions are dictated by Spark (4.x = 2.13 only).
+      - dependency-name: "org.scala-lang:scala-library"
+        update-types: ["version-update:semver-major", "version-update:semver-minor"]
+
+  # Keeps the commit-SHA pins in .github/workflows current.
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly

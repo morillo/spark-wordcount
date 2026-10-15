@@ -3,7 +3,14 @@
 # Game of Thrones Word Count - DataFrame API - Spark Submit Runner
 # Usage: ./run-wordcount-dataframe.sh <input_file> <output_directory>
 
-set -e
+set -euo pipefail
+cd "$(dirname "$0")"
+
+# Spark 4.x supports Java 17/21 only; Homebrew's default java is too new.
+export JAVA_HOME="$(/usr/libexec/java_home -v 17)"
+
+# Pinned Spark distribution matching spark.version in pom.xml (override with SPARK_HOME).
+export SPARK_HOME="${SPARK_HOME:-/usr/local/spark-versions/spark-4.1.3}"
 
 # Check arguments
 if [ $# -ne 2 ]; then
@@ -23,6 +30,12 @@ if [ ! -f "$INPUT_FILE" ]; then
     exit 1
 fi
 
+if [ ! -x "$SPARK_HOME/bin/spark-submit" ]; then
+    echo "Error: spark-submit not found at $SPARK_HOME/bin/spark-submit"
+    echo "Install the pinned Spark distribution (see README) or set SPARK_HOME."
+    exit 1
+fi
+
 # Check if jar was created by Maven build
 JAR_FILE="target/spark-wordcount-1.0.0.jar"
 if [ ! -f "$JAR_FILE" ]; then
@@ -38,13 +51,13 @@ if [ -d "$OUTPUT_DIR" ]; then
 fi
 
 # Submit the job to Spark using DataFrame API
-echo "Submitting Spark job (DataFrame API)..."
+echo "Submitting Spark job (DataFrame API) with $SPARK_HOME..."
 echo "Input: $INPUT_FILE"
 echo "Output: $OUTPUT_DIR"
 
-spark-submit \
+"$SPARK_HOME/bin/spark-submit" \
   --class com.morillo.spark.WordCountDataFrame \
-  --master local[*] \
+  --master "local[*]" \
   --deploy-mode client \
   --driver-memory 2g \
   --executor-memory 1g \
