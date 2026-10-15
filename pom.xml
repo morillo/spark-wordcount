@@ -136,7 +136,7 @@ Spark 4.x supports Java 17 or 21 only. Run Maven with JDK 17, e.g.:
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-jar-plugin</artifactId>
-                <version>3.4.2</version>
+                <version>3.5.1</version>
                 <configuration>
                     <archive>
                         <manifest>
