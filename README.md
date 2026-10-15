@@ -1,105 +1,106 @@
 # Game of Thrones Word Count - Apache Spark Application
 
-A modernized Apache Spark application that performs word counting on text files, featuring Game of Thrones character data from the HBO series.
+A small Apache Spark application that counts words in text files, using Game of Thrones character data from the HBO series as sample input. The same job is implemented twice, with the classic RDD API and with the DataFrame API, and both produce identical output.
 
-## 🚀 Features
+[![CI](https://github.com/morillo/spark-wordcount/actions/workflows/ci.yml/badge.svg)](https://github.com/morillo/spark-wordcount/actions/workflows/ci.yml)
 
-- **Modern Spark 4.0.1** with Scala 2.13 support
-- **Java 17** compatibility
-- **Two implementations**: Classic RDD API and modern DataFrame/SparkSQL API
-- **Command-line arguments** for flexible input/output paths
-- **Automated build and execution** via shell scripts
-- **Word processing** with case normalization and punctuation removal
+## Features
+
+- **Spark 4.1.3** with Scala 2.13 and **Java 17**
+- **Two implementations**: RDD API (`WordCount`) and DataFrame API (`WordCountDataFrame`), sharing one word-cleaning rule (`WordCleaner`)
+- **Command-line arguments** for input path and output directory
+- **Run scripts** that pick the right JDK and Spark distribution
+- **Word processing** with case normalisation and punctuation removal
 - **Frequency-sorted results** (most common words first)
+- **Strict build**: warnings are errors, scalafmt formatting, ScalaTest suites, CI on every pull request
 
-## 📋 Prerequisites
+## Prerequisites
 
-- **Apache Spark 4.0.1** (installed via Homebrew)
-- **OpenJDK 17** (installed via Homebrew)
-- **Maven 3.x** (installed via Homebrew)
+- **OpenJDK 17** (Homebrew `openjdk@17`). Spark 4.x supports Java 17 or 21 only; the build refuses other JDKs with a clear message.
+- **Maven 3.x** (Homebrew)
+- **A pinned Apache Spark distribution** matching `spark.version` in `pom.xml`. The run scripts default to `/usr/local/spark-versions/spark-4.1.3` and honour `SPARK_HOME` if set. Homebrew's `apache-spark` tracks the latest release, which may be ahead of the version this project is built against, so it is not used.
 
-Verify your installations:
+Install the pinned distribution once:
+
 ```bash
-spark-submit --version
-java --version
-mvn --version
+curl -o /tmp/spark.tgz https://dlcdn.apache.org/spark/spark-4.1.3/spark-4.1.3-bin-hadoop3.tgz
+sudo mkdir -p /usr/local/spark-versions
+sudo tar xzf /tmp/spark.tgz -C /usr/local/spark-versions
+sudo mv /usr/local/spark-versions/spark-4.1.3-bin-hadoop3 /usr/local/spark-versions/spark-4.1.3
 ```
 
-## 🏗️ Project Structure
+Verify:
+
+```bash
+/usr/libexec/java_home -v 17
+mvn --version
+/usr/local/spark-versions/spark-4.1.3/bin/spark-submit --version
+```
+
+When bumping Spark, change `spark.version` and `scala.version` in `pom.xml` (use the Scala version shipped in the distribution's `jars/` folder) and the `SPARK_HOME` default in both run scripts together.
+
+## Project Structure
 
 ```
 .
 ├── README.md
-├── pom.xml                                    # Maven configuration
+├── pom.xml                                    # Maven build (strict compiler, scalafmt, ScalaTest)
+├── .scalafmt.conf                             # Formatting rules
+├── .pre-commit-config.yaml                    # Gitleaks + spotless:check before each commit
+├── .github/workflows/ci.yml                   # CI: mvn verify, Gitleaks, dependency review
+├── .github/dependabot.yml                     # Weekly dependency and action updates
 ├── src/main/scala/com/morillo/spark/
+│   ├── WordCleaner.scala                      # Shared word normalisation
 │   ├── WordCount.scala                        # RDD API implementation
-│   └── WordCountDataFrame.scala               # DataFrame/SparkSQL API implementation
-├── run-wordcount.sh                          # RDD API execution script
-├── run-wordcount-dataframe.sh                # DataFrame API execution script
-├── westeros.txt                              # Sample Game of Thrones data
-└── target/                                   # Build outputs (generated)
+│   └── WordCountDataFrame.scala               # DataFrame API implementation
+├── src/test/scala/com/morillo/spark/          # ScalaTest suites
+├── run-wordcount.sh                           # RDD API execution script
+├── run-wordcount-dataframe.sh                 # DataFrame API execution script
+├── westeros.txt                               # Sample Game of Thrones data
+└── target/                                    # Build outputs (generated)
 ```
 
-## 🔧 Building the Project
+## Building the Project
 
-**You must build the project before running the execution scripts:**
+Maven must run on JDK 17:
 
 ```bash
-# Set Java 17 for Maven (if using Java 24 by default)
 export JAVA_HOME=$(/usr/libexec/java_home -v 17)
-
-# Build the project
 mvn clean package
 ```
 
-This creates `target/spark-wordcount-1.0.0.jar` ready for Spark submission.
+This creates `target/spark-wordcount-1.0.0.jar`. The jar contains only this project's classes; Spark and Scala are `provided` and come from the Spark distribution at run time, so the jar is a few kilobytes.
 
-**Note**: The execution scripts (`run-wordcount.sh` and `run-wordcount-dataframe.sh`) do NOT build the project automatically. You must run the Maven build command first.
+**Note**: the run scripts do not build the project. Run the Maven build first.
 
-## 🚀 Running the Application
+## Running the Application
 
-### Prerequisites: Build First
-```bash
-# Build the project (required before running scripts)
-mvn clean package
-```
+Both scripts set `JAVA_HOME` to JDK 17 and `SPARK_HOME` to the pinned distribution, check that the jar exists, and remove an existing output directory before submitting (Spark requires a non-existent output path).
 
-### Option 1: RDD API Implementation (Classic Approach)
+### Option 1: RDD API Implementation
 
 ```bash
-# Make script executable (first time only)
-chmod +x run-wordcount.sh
-
-# Run with Game of Thrones data
 ./run-wordcount.sh westeros.txt sevenkingdoms
-
-# Run with custom input/output
 ./run-wordcount.sh /path/to/input.txt /path/to/output_directory
 ```
 
-### Option 2: DataFrame API Implementation (Modern SparkSQL)
+### Option 2: DataFrame API Implementation
 
 ```bash
-# Make script executable (first time only)
-chmod +x run-wordcount-dataframe.sh
-
-# Run with Game of Thrones data
 ./run-wordcount-dataframe.sh westeros.txt sevenkingdoms-dataframe
-
-# Run with custom input/output
 ./run-wordcount-dataframe.sh /path/to/input.txt /path/to/output_directory
 ```
 
 ### Option 3: Direct spark-submit
 
 ```bash
-# Build first
-mvn clean package
+export JAVA_HOME=$(/usr/libexec/java_home -v 17)
+export SPARK_HOME=/usr/local/spark-versions/spark-4.1.3
 
-# Submit RDD API version to Spark
-spark-submit \
+# RDD API
+"$SPARK_HOME/bin/spark-submit" \
   --class com.morillo.spark.WordCount \
-  --master local[*] \
+  --master "local[*]" \
   --deploy-mode client \
   --driver-memory 2g \
   --executor-memory 1g \
@@ -107,10 +108,10 @@ spark-submit \
   westeros.txt \
   sevenkingdoms
 
-# Submit DataFrame API version to Spark
-spark-submit \
+# DataFrame API
+"$SPARK_HOME/bin/spark-submit" \
   --class com.morillo.spark.WordCountDataFrame \
-  --master local[*] \
+  --master "local[*]" \
   --deploy-mode client \
   --driver-memory 2g \
   --executor-memory 1g \
@@ -119,7 +120,11 @@ spark-submit \
   sevenkingdoms-dataframe
 ```
 
-## 📊 Sample Output
+### From IntelliJ IDEA
+
+The shared run configurations `WordCount (RDD API)` and `WordCountDataFrame (DataFrame API)` run the apps on the Spark libraries Maven downloads. They enable "Add dependencies with 'provided' scope to classpath" and pass the `--add-opens` JVM flags Spark 4 needs on JDK 17. They write to `sevenkingdoms-ide/` and `sevenkingdoms-dataframe-ide/`.
+
+## Sample Output
 
 Running on the included `westeros.txt` produces frequency-sorted results:
 
@@ -136,114 +141,72 @@ Running on the included `westeros.txt` produces frequency-sorted results:
 ...
 ```
 
-## 📁 Viewing Results
+The RDD version sorts by count only, so words with equal counts can appear in any order. The DataFrame version sorts by count, then alphabetically. The set of lines is identical.
 
 ```bash
-# View all output files
 cat sevenkingdoms/part-*
-
-# Or view individual partitions
-ls sevenkingdoms/
-cat sevenkingdoms/part-00000
 ```
 
-## 🛠️ Configuration
-
-### Maven Properties (pom.xml)
-
-- **Spark Version**: 4.0.1
-- **Scala Version**: 2.13.12
-- **Java Target**: 17
-- **Dependencies**: spark-core, spark-sql (scope: provided)
-
-### Spark Configuration
-
-The application uses these default Spark settings:
-- **Master**: `local[*]` (all available cores)
-- **Driver Memory**: 2GB
-- **Executor Memory**: 1GB
-- **Deploy Mode**: client
-
-## 🔍 Application Logic
-
-### RDD API Implementation (WordCount.scala)
-
-1. **Input Validation**: Ensures exactly 2 arguments (input path, output path)
-2. **Spark Session**: Creates session with descriptive app name
-3. **Text Processing**:
-   - Reads input file(s) using `sc.textFile()`
-   - Splits lines on whitespace using `flatMap`
-   - Filters empty strings
-   - Normalizes to lowercase and removes punctuation using `map`
-   - Filters empty results after cleaning
-4. **Word Counting**: Uses `reduceByKey()` for distributed counting
-5. **Sorting**: Results sorted by frequency using `sortBy()`
-6. **Output**: Saves to specified directory path using `saveAsTextFile()`
-
-### DataFrame API Implementation (WordCountDataFrame.scala)
-
-1. **Input Validation**: Ensures exactly 2 arguments (input path, output path)
-2. **Spark Session**: Creates session with descriptive app name
-3. **Text Processing**:
-   - Reads input file(s) using `spark.read.text()`
-   - Splits lines using `explode(split())` functions
-   - Filters empty strings using DataFrame operations
-   - Normalizes using `lower()` and `regexp_replace()` functions
-   - Filters empty results after cleaning
-4. **Word Counting**: Uses `groupBy().agg(count())` for aggregation
-5. **Sorting**: Results sorted using `orderBy(desc(), asc())`
-6. **Output**: Saves using DataFrame `write.text()` operations
-7. **Bonus**: Includes SQL query alternative (commented) and console output with statistics
-
-## 🔧 Development
-
-### Code Structure
-
-- **Package**: `com.morillo.spark`
-- **RDD API Class**: `WordCount`
-- **DataFrame API Class**: `WordCountDataFrame`
-- **Entry Points**: `main(args: Array[String])` in both classes
-
-### Key Dependencies
-
-```xml
-<dependency>
-    <groupId>org.apache.spark</groupId>
-    <artifactId>spark-core_2.13</artifactId>
-    <version>4.0.1</version>
-    <scope>provided</scope>
-</dependency>
-<dependency>
-    <groupId>org.apache.spark</groupId>
-    <artifactId>spark-sql_2.13</artifactId>
-    <version>4.0.1</version>
-    <scope>provided</scope>
-</dependency>
-```
-
-## 📝 Usage Examples
+## Testing
 
 ```bash
-# Build first (always required)
-mvn clean package
+export JAVA_HOME=$(/usr/libexec/java_home -v 17)
 
-# Basic word count (RDD API)
-./run-wordcount.sh westeros.txt got_results
+# Run all tests
+mvn test
 
-# Basic word count (DataFrame API)
-./run-wordcount-dataframe.sh westeros.txt got_results_df
-
-# Process large text file (RDD API)
-./run-wordcount.sh /data/books/complete_series.txt /results/word_analysis
-
-# Process large text file (DataFrame API)
-./run-wordcount-dataframe.sh /data/books/complete_series.txt /results/word_analysis_df
-
-# Count words in log files (DataFrame API with better performance for complex queries)
-./run-wordcount-dataframe.sh /var/log/application.log /analytics/log_words
+# Run a specific suite
+mvn test -Dsuites=com.morillo.spark.WordCountTest
 ```
 
-## 🔄 RDD vs DataFrame API Comparison
+`WordCleanerTest` covers the normalisation rule. `WordCountTest` starts a local SparkSession and checks that both implementations return the same counts, the expected ordering, and the same `(word,count)` output lines.
+
+## Code Quality and CI
+
+The build is strict, and CI enforces it on every pull request and push to `master`.
+
+- **Compiler**: scalac runs with `-Xlint -Wdead-code -Wvalue-discard -Werror`, so any warning fails the build.
+- **Formatting**: [scalafmt](https://scalameta.org/scalafmt/) through the Spotless Maven plugin; rules live in `.scalafmt.conf`.
+
+  ```bash
+  mvn spotless:apply   # format the code
+  mvn spotless:check   # fail on unformatted code (also part of `mvn verify`)
+  ```
+
+- **Secrets**: [Gitleaks](https://github.com/gitleaks/gitleaks) scans the full history in CI and the staged changes in the pre-commit hook.
+- **Dependencies**: Dependabot opens weekly update PRs for Maven dependencies and GitHub Actions (`.github/dependabot.yml`). Spark and Scala minor/major bumps are excluded on purpose because they must move together with the pinned Spark distribution. On pull requests, `dependency-review-action` flags newly added dependencies with known CVEs.
+- **CI** (`.github/workflows/ci.yml`): `mvn -B -ntp verify` on JDK 17 (compile, tests, format check), plus the Gitleaks and dependency-review jobs. Actions are pinned to commit SHAs and the workflow token is read-only.
+
+Run the same full check locally before pushing:
+
+```bash
+export JAVA_HOME=$(/usr/libexec/java_home -v 17)
+mvn verify
+```
+
+### Pre-commit hooks
+
+```bash
+uv tool install pre-commit   # once per machine
+pre-commit install           # once per clone
+pre-commit run --all-files   # run every hook by hand
+```
+
+The hooks run Gitleaks and `mvn spotless:check` before each commit. Maven needs JDK 17; the hook finds it with `/usr/libexec/java_home -v 17` on macOS and falls back to `JAVA_HOME` elsewhere.
+
+## Application Logic
+
+Both implementations validate that exactly two arguments are given, create a SparkSession, and stop it in a `finally` block. The word rule lives in `WordCleaner`: split on whitespace, lowercase, strip every character that is not a letter or digit, drop empty results.
+
+### RDD API (`WordCount.countWords`)
+
+`flatMap` on whitespace, `map` through `WordCleaner.clean`, `filter` empties, `reduceByKey` to count, `sortBy` count descending, `saveAsTextFile`.
+
+### DataFrame API (`WordCountDataFrame.countWords`)
+
+`explode(split(...))`, `regexp_replace(lower(...))`, `filter`, `groupBy().agg(count())`, `orderBy(desc("count"), asc("clean_word"))`. `formatForOutput` turns the rows into the same `(word,count)` text the RDD version writes, and `main` also prints the top 20 words and the number of unique words.
+
+## RDD vs DataFrame API Comparison
 
 | Feature | RDD API | DataFrame API |
 |---------|---------|---------------|
@@ -254,30 +217,28 @@ mvn clean package
 | **Learning Curve** | Steeper for beginners | Easier for SQL users |
 | **Best For** | Complex transformations, legacy code | Analytics, SQL users, performance-critical apps |
 
-## 🐛 Troubleshooting
+## Troubleshooting
 
-### Java Version Issues
+### Wrong JDK
+
+The build fails early with `Spark 4.x supports Java 17 or 21 only` when Maven runs on another JDK:
+
 ```bash
-# Ensure Java 17 is being used
 export JAVA_HOME=$(/usr/libexec/java_home -v 17)
-./run-wordcount.sh input.txt output
 ```
+
+### spark-submit not found
+
+The run scripts print `spark-submit not found at ...`. Install the pinned distribution (see Prerequisites) or point `SPARK_HOME` at an existing Spark 4.1.x install.
 
 ### Output Directory Exists
-The script automatically removes existing output directories since Spark requires non-existent output paths.
 
-### Build Failures
-```bash
-# Clean and rebuild
-mvn clean
-mvn compile
-mvn package
-```
+The scripts remove an existing output directory before submitting. With direct `spark-submit`, delete it yourself first.
 
-## 📜 License
+## License
 
 This project demonstrates Apache Spark capabilities using Game of Thrones character data for educational purposes.
 
-## 🤝 Contributing
+## Contributing
 
-Feel free to submit issues and pull requests to improve this Spark application example.
+Open a pull request; CI must pass (build, tests, format check, secret scan).

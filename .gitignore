@@ -7,3 +7,6 @@ sevenkingdoms-dataframe/
 # IDE output directories
 sevenkingdoms-ide/
 sevenkingdoms-dataframe-ide/
+
+# IntelliJ regenerates module files from pom.xml
+*.iml

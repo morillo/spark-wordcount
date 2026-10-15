@@ -9,8 +9,5 @@
         <module name="spark-wordcount" />
       </profile>
     </annotationProcessing>
-    <bytecodeTargetLevel>
-      <module name="spark-wordcount" target="17" />
-    </bytecodeTargetLevel>
   </component>
 </project>
