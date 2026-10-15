@@ -20,7 +20,7 @@
              used by the run scripts: /usr/local/spark-versions/spark-4.1.3
              (see README "Prerequisites"). scala.version is the one that
              distribution ships (jars/scala-library-*.jar). -->
-        <scala.version>2.13.17</scala.version>
+        <scala.version>2.13.18</scala.version>
         <scala.compat.version>2.13</scala.compat.version>
         <spark.version>4.1.3</spark.version>
         <scalatest.version>3.2.20</scalatest.version>
